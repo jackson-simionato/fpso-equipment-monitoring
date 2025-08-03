@@ -201,3 +201,203 @@ class DataPlotter:
         
         plt.tight_layout()
         return fig
+    
+    def plot_boxplot(self, 
+                    data: pd.DataFrame, 
+                    column: str,
+                    category: Optional[str] = None,
+                    title: Optional[str] = None,
+                    figsize: Optional[Tuple[int, int]] = None) -> plt.Figure:
+        """
+        Create a boxplot for a specific column, optionally grouped by category.
+        
+        Args:
+            data: DataFrame containing the data
+            column: Column name to plot (numeric)
+            category: Optional categorical column to group by
+            title: Plot title
+            figsize: Figure size (width, height)
+            
+        Returns:
+            matplotlib Figure object
+        """
+        if figsize is None:
+            figsize = self.figsize
+            
+        fig, ax = plt.subplots(figsize=figsize)
+        
+        # Create boxplot
+        if category is None:
+            sns.boxplot(data=data, y=column, ax=ax, color="#E61E5C", 
+                       flierprops=dict(markerfacecolor='white', markeredgecolor='white', markersize=4))
+        else:
+            sns.boxplot(data=data, x=category, y=column, ax=ax,
+                       flierprops=dict(markerfacecolor='white', markeredgecolor='white', markersize=4))
+        
+        # Set labels and title
+        if title is None:
+            if category is None:
+                title = f'Boxplot of {column}'
+            else:
+                title = f'{column} by {category}'
+                
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        return fig
+    
+    def plot_multiple_boxplots(self, 
+                              data: pd.DataFrame, 
+                              columns: List[str],
+                              category: Optional[str] = None,
+                              cols: int = 2,
+                              figsize: Optional[Tuple[int, int]] = None) -> plt.Figure:
+        """
+        Create multiple boxplots in a subplot layout.
+        
+        Args:
+            data: DataFrame containing the data
+            columns: List of column names to plot (numeric)
+            category: Optional categorical column to group by
+            cols: Number of columns in subplot grid
+            figsize: Figure size (width, height)
+            
+        Returns:
+            matplotlib Figure object
+        """
+        n_plots = len(columns)
+        rows = (n_plots + cols - 1) // cols
+        
+        if figsize is None:
+            figsize = (6 * cols, 4 * rows)
+            
+        fig, axes = plt.subplots(rows, cols, figsize=figsize)
+        
+        # Handle different subplot cases
+        if n_plots == 1:
+            axes = [axes]
+        elif rows == 1:
+            axes = axes.flatten()
+        else:
+            axes = axes.flatten()
+        
+        for i, column in enumerate(columns):
+            # Create boxplot
+            if category is None:
+                sns.boxplot(data=data, y=column, ax=axes[i], color="#E61E5C",
+                           flierprops=dict(markerfacecolor='white', markeredgecolor='white', markersize=4))
+            else:
+                sns.boxplot(data=data, x=category, y=column, ax=axes[i],
+                           flierprops=dict(markerfacecolor='white', markeredgecolor='white', markersize=4))
+            
+            # Set title and grid
+            axes[i].set_title(f'{column}', fontsize=12, fontweight='bold')
+            axes[i].grid(True, alpha=0.3)
+        
+        # Hide empty subplots
+        for i in range(n_plots, len(axes)):
+            axes[i].set_visible(False)
+        
+        plt.tight_layout()
+        return fig
+
+    def plot_correlation_heatmap(self, 
+                                data: pd.DataFrame, 
+                                columns: Optional[List[str]] = None,
+                                title: Optional[str] = None,
+                                figsize: Optional[Tuple[int, int]] = None) -> plt.Figure:
+        """
+        Create a correlation heatmap for numeric columns.
+    
+        Args:
+            data: DataFrame containing the data
+            columns: List of columns to include (if None, uses all numeric columns)
+            title: Plot title
+            figsize: Figure size (width, height)
+        
+        Returns:
+            matplotlib Figure object
+        """
+        # Select columns
+        if columns is None:
+            numeric_data = data.select_dtypes(float)
+        else:
+            numeric_data = data[columns]
+    
+        # Calculate correlation matrix
+        corr_matrix = numeric_data.corr()
+    
+        if figsize is None:
+            # Auto-size based on number of variables
+            size = max(8, len(corr_matrix.columns) * 0.8)
+            figsize = (size, size)
+        
+        fig, ax = plt.subplots(figsize=figsize)
+    
+        # Create heatmap
+        sns.heatmap(corr_matrix, 
+                    annot=True, 
+                    fmt='.2f', 
+                    cmap='RdBu_r',
+                    center=0,
+                    square=True,
+                    linewidths=0.5,
+                    cbar_kws={'shrink': 0.8},
+                    ax=ax)
+    
+        # Set title
+        if title is None:
+            title = 'Correlation Matrix'
+        
+        ax.set_title(title, fontsize=14)
+    
+        plt.tight_layout()
+        return fig
+
+    def plot_failure_rate_heatmap(self, 
+                                  data: pd.DataFrame, 
+                                  row_var: str,
+                                  col_var: str,
+                                  target_var: str = "Fail",
+                                  title: Optional[str] = None,
+                                  figsize: Optional[Tuple[int, int]] = None) -> plt.Figure:
+        """
+        Create a heatmap showing failure rates across two categorical variables.
+    
+        Args:
+            data: DataFrame containing the data
+            row_var: Variable for rows (e.g., 'Preset_1')
+            col_var: Variable for columns (e.g., 'Preset_2') 
+            title: Plot title
+            figsize: Figure size (width, height)
+        
+        Returns:
+            matplotlib Figure object
+        """
+        # Calculate failure rate by grouping variables
+        failure_rate = data.groupby([row_var, col_var])[target_var].mean().unstack(fill_value=0)
+    
+        if figsize is None:
+            figsize = self.figsize
+        
+        fig, ax = plt.subplots(figsize=figsize)
+    
+        # Create heatmap
+        sns.heatmap(failure_rate, 
+                    annot=True, 
+                    fmt='.2f', 
+                    cmap='Reds',
+                    square=True,
+                    linewidths=0.5,
+                    cbar_kws={'shrink': 0.8},
+                    ax=ax)
+    
+        # Set title and labels
+        if title is None:
+            title = f'Failure Rate by {row_var} and {col_var}'
+        
+        ax.set_title(title, fontsize=14, fontweight='bold')
+    
+        plt.tight_layout()
+        return fig
