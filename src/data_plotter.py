@@ -301,6 +301,63 @@ class DataPlotter:
         
         plt.tight_layout()
         return fig
+    
+    def plot_time_series(self, 
+                        data: pd.DataFrame, 
+                        columns: Union[str, List[str]],
+                        x_col: Optional[str] = None,
+                        title: Optional[str] = None,
+                        figsize: Optional[Tuple[int, int]] = None) -> plt.Figure:
+        """
+        Create a time series line plot for one or multiple columns.
+
+        Args:
+            data: DataFrame containing the data
+            columns: Column name(s) to plot (string for single, list for multiple)
+            x_col: Column to use for x-axis (if None, uses DataFrame index)
+            title: Plot title
+            figsize: Figure size (width, height)
+        
+        Returns:
+            matplotlib Figure object
+        """
+        if figsize is None:
+            figsize = self.figsize
+            
+        fig, ax = plt.subplots(figsize=figsize)
+        
+        # Convert single column to list for consistent handling
+        if isinstance(columns, str):
+            columns = [columns]
+        
+        # Set x-axis data
+        x_data = data[x_col] if x_col else data.index
+        
+        # Plot lines for each column
+        for column in columns:
+            ax.plot(x_data, data[column], label=column, linewidth=2)
+        
+        # Set labels and title
+        if title is None:
+            if len(columns) == 1:
+                title = f'Time Series: {columns[0]}'
+            else:
+                title = 'Time Series Plot'
+        
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.set_xlabel(x_col if x_col else data.index.name, fontsize=12)
+        ax.set_ylabel('-'.join(columns), fontsize=12)
+        ax.set_ylim(0, data[columns].max().max() * 1.1)  # Set y-limits to 110% of max value
+        
+        # Add legend if multiple columns
+        if len(columns) > 1:
+            ax.legend()
+        
+        # Add grid
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        return fig
 
     def plot_correlation_heatmap(self, 
                                 data: pd.DataFrame, 
