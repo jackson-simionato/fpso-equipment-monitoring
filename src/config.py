@@ -13,3 +13,6 @@ class ApplicationConfig:
 
         self.processed_data_path = Path(project_root / 'data' / 'processed' / 'df_fpso_failure_monitoring_processed.csv')
         self.processed_data_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+
+        self.sensor_columns = ['Temperature','Pressure', 'VibrationX', 'VibrationY','VibrationZ', 'Frequency']
+        self.categorical_columns = ['Preset_1', 'Preset_2']
