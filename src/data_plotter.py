@@ -458,3 +458,50 @@ class DataPlotter:
     
         plt.tight_layout()
         return fig
+
+    def plot_bar(self, 
+                 data: pd.DataFrame, 
+                 x: str, 
+                 y: str, 
+                 top_n: Optional[int] = None,
+                 figsize: Optional[Tuple[int, int]] = None,
+                 title: Optional[str] = None,
+                 xlabel: Optional[str] = None,
+                 ylabel: Optional[str] = None,
+                 color: Optional[str] = "#E61E5C") -> plt.Figure:
+        """
+        Create a barplot for any two columns.
+
+        Args:
+            data: DataFrame containing the data
+            x: Column name for x-axis
+            y: Column name for y-axis
+            top_n: If set, plot only the top N rows (sorted by y descending)
+            figsize: Figure size (width, height)
+            title: Plot title
+            xlabel: X-axis label
+            ylabel: Y-axis label
+            color: Bar color
+
+        Returns:
+            matplotlib Figure object
+        """
+        if figsize is None:
+            figsize = self.figsize
+
+        plot_data = data.copy()
+        if top_n is not None:
+            plot_data = plot_data.sort_values(by=y, ascending=False).head(top_n)
+
+        fig, ax = plt.subplots(figsize=figsize)
+        sns.barplot(x=x, y=y, data=plot_data, ax=ax, color=color)
+
+        if title is None:
+            title = f"Barplot of {y} by {x}"
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.set_xlabel(xlabel or x, fontsize=12)
+        ax.set_ylabel(ylabel or y, fontsize=12)
+        ax.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        return fig
