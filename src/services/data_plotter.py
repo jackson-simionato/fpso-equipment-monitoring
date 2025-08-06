@@ -7,6 +7,7 @@ of FPSO equipment monitoring data.
 
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import seaborn as sns
 from typing import Optional, List, Tuple, Union
 
@@ -503,5 +504,152 @@ class DataPlotter:
         ax.set_ylabel(ylabel or y, fontsize=12)
         ax.grid(True, alpha=0.3)
 
+        plt.tight_layout()
+        return fig
+    
+    ## Functions related to failure
+    def plot_failure_timeline(self, df: pd.DataFrame, figsize: Tuple[int, int] = (12, 6), target_col: str = 'Fail') -> plt.Figure:
+        """
+        Create a timeline plot showing failure events over time.
+        
+        Args:
+            df (pd.DataFrame): DataFrame with failure data
+            figsize (Tuple[int, int]): Figure size
+            
+        Returns:
+            plt.Figure: Matplotlib figure
+        """
+        fig, ax = plt.subplots(figsize=figsize)
+        
+        # Create failure state as integer
+        failure_over_time = df[target_col].astype(int)
+        
+        # Plot as bar chart
+        colors = ['lightblue' if x == 0 else 'red' for x in failure_over_time]
+        ax.bar(failure_over_time.index, failure_over_time, 
+               color=colors, alpha=0.7, width=1)
+        
+        ax.set_xlabel('Operation Cycle')
+        ax.set_ylabel('Failure State')
+        ax.set_title('Failure Events Over Time')
+        ax.set_yticks([0, 1])
+        ax.set_yticklabels(['Normal', 'Failure'])
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        return fig
+    
+    def plot_failure_summary_heatmap(self, df: pd.DataFrame, sensor_columns: List[str],
+                                    target_col: str = 'Fail',
+                                    failure_id_col: str = 'Fail_index',
+                                    agg_funcs: List[str] = ['mean', 'max', 'std'],
+                                    figsize: Tuple[int, int] = (16, 10)) -> plt.Figure:
+        """
+        Create a heatmap showing failure event sensor statistics.
+        
+        Args:
+            df (pd.DataFrame): DataFrame with failure events
+            sensor_columns (List[str]): Sensor columns to analyze
+            agg_funcs (List[str]): Aggregation functions
+            figsize (Tuple[int, int]): Figure size
+            
+        Returns:
+            plt.Figure: Matplotlib figure
+        """
+        assert target_col in df.columns, f"Target column '{target_col}' not found in DataFrame."
+        assert failure_id_col in df.columns, f"Failure ID column '{failure_id_col}'"
+
+        failure_data = df[df[target_col] == True].copy()
+        
+        if len(failure_data) == 0:
+            print("No failure data available for heatmap")
+            return plt.figure()
+        
+        # Calculate statistics
+        agg_dict = {col: agg_funcs for col in sensor_columns}
+        agg_dict[failure_id_col] = 'count'
+
+        failures_summary = failure_data.groupby(failure_id_col).agg(agg_dict)
+
+        # Flatten the multi-level columns
+        df_flat = failures_summary.copy()
+        df_flat.columns = [f"{col[0]}_{col[1]}" for col in df_flat.columns]
+        
+        # Separate sensor variables from duration
+        sensor_cols = [col for col in df_flat.columns if col != f'{failure_id_col}_count']
+
+        # Create figure with subplots
+        fig, axes = plt.subplots(1, 2, figsize=figsize, gridspec_kw={'width_ratios': [4, 1]})
+        
+        # Plot 1: Sensor variables heatmap (normalized by column)
+        sensor_data = df_flat[sensor_cols]
+        sensor_normalized = sensor_data.apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=0)
+        
+        sns.heatmap(sensor_normalized, 
+                    annot=sensor_data.round(1),
+                    cmap='RdYlBu_r', 
+                    cbar_kws={'label': 'Normalized Scale (0-1)'}, 
+                    ax=axes[0],
+                    fmt='g')
+        
+        axes[0].set_title('Sensor Variables (Each Column Independently Scaled)')
+        axes[0].set_ylabel(failure_id_col)
+        
+        # Plot 2: Duration heatmap
+        duration_data = df_flat[[f'{failure_id_col}_count']]
+        duration_normalized = (duration_data - duration_data.min()) / (duration_data.max() - duration_data.min())
+        
+        sns.heatmap(duration_normalized,
+                    annot=duration_data,
+                    cmap='Reds',
+                    cbar_kws={'label': 'Duration Scale'},
+                    ax=axes[1],
+                    fmt='g')
+        
+        axes[1].set_title('Duration\n(Cycles)')
+        axes[1].set_ylabel('')
+        
+        plt.suptitle('Failure Events - Sensor Statistics Heatmap', fontsize=14, y=1.02)
+        plt.tight_layout()
+        return fig
+    
+    def plot_preset_configurations_per_failure(self, df: pd.DataFrame,
+                                              target_col: str = 'Fail',
+                                              preset_col: str = 'Preset_1',
+                                              figsize: Tuple[int, int] = (10, 5)) -> plt.Figure:
+        """
+        Create a stacked bar plot showing preset configurations per failure event.
+        
+        Args:
+            df (pd.DataFrame): DataFrame with failure events
+            preset_col (str): Preset column to analyze
+            figsize (Tuple[int, int]): Figure size
+            
+        Returns:
+            plt.Figure: Matplotlib figure
+        """
+        failure_data = df[df[target_col] == True].copy()
+        
+        if len(failure_data) == 0:
+            print("No failure data available for preset analysis")
+            return plt.figure()
+        
+        # Create figure
+        fig, ax = plt.subplots(figsize=figsize)
+        
+        # Create stacked barplot
+        failure_data.groupby(['Fail_index', preset_col]).size().unstack().plot(
+            kind='bar',
+            stacked=True,
+            colormap='Paired',
+            ax=ax
+        )
+        
+        # Adjust axes and labels
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_ylabel('Number of cycles')
+        ax.set_xlabel('Failure event id')
+        ax.set_title(f'{preset_col} Configurations per Failure Event')
+        
         plt.tight_layout()
         return fig
