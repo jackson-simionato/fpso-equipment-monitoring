@@ -4,6 +4,16 @@ from src.services.model_pipeline import ModelPipeline
 from src.config import ApplicationConfig
 
 class RunModelsRoutes:
+    """
+    Route for running the complete machine learning modeling pipeline.
+
+    This class handles train-test splitting, model comparison, report generation,
+    saving the best pipeline, and extracting feature importances.
+
+    Args:
+        model_pipeline (ModelPipeline, optional): ModelPipeline instance.
+        config (ApplicationConfig, optional): Application configuration instance.
+    """
     def __init__(self, model_pipeline: Optional[ModelPipeline], config: Optional[ApplicationConfig]):
         """
         Initialize the RunModelsRoutes.
@@ -20,7 +30,10 @@ class RunModelsRoutes:
         Complete modeling pipeline for the dataset.
 
         Args:
-            processed_df (pd.DataFrame): Fully processed DataFrame after data_processing
+            processed_df (pd.DataFrame): Fully processed DataFrame after data_processing.
+
+        Returns:
+            dict: Dictionary containing comparison results, model report, best pipeline, and feature importance.
         """
         # Step 1: Create train-test split
         X_train, X_test, y_train, y_test = self.model_pipeline.create_train_test_split(
@@ -33,7 +46,6 @@ class RunModelsRoutes:
         print(f"Test set: {X_test.shape[0]} samples")
         print(f"Features: {X_train.shape[1]}")
 
-        
         comparison_results = self.model_pipeline.compare_models(
             X_train, y_train, X_test, y_test, cv_folds=self.config.cv_folds
         )

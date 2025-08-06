@@ -5,16 +5,39 @@ from src.services.data_processor import DataProcessor
 from src.services.failure_analyzer import FailureAnalyzer
 
 class PreProcessDataRoute:
+    """
+    Route for loading and processing raw FPSO equipment monitoring data.
+
+    This class handles the initial data loading, cleaning, and failure index creation,
+    and saves the processed data to disk.
+
+    Args:
+        config (ApplicationConfig, optional): Application configuration instance.
+        data_processor (DataProcessor, optional): DataProcessor instance.
+        failure_analyzer (FailureAnalyzer, optional): FailureAnalyzer instance.
+    """
     def __init__(self, config: Optional[ApplicationConfig] = None,
                  data_processor: Optional[DataProcessor] = None,
                  failure_analyzer: Optional[FailureAnalyzer] = None):
         """
+        Initialize the PreProcessDataRoute.
+
+        Args:
+            config (ApplicationConfig, optional): Application configuration instance.
+            data_processor (DataProcessor, optional): DataProcessor instance.
+            failure_analyzer (FailureAnalyzer, optional): FailureAnalyzer instance.
         """
         self.config = config or ApplicationConfig()
         self.data_processor = data_processor or DataProcessor()
         self.failure_analyzer = failure_analyzer or FailureAnalyzer()
 
     def run(self):
+        """
+        Load, clean, and process the raw data, then save the processed data.
+
+        Returns:
+            dict: Dictionary containing the processed DataFrame and its shape.
+        """
         print("\n1. LOADING AND PROCESSING DATA...")
         raw_df = pd.read_csv(self.config.data_path)
 
