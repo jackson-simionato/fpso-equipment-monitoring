@@ -4,7 +4,7 @@ from ..services.data_processor import DataProcessor
 from ..services.feature_engineer import FeatureEngineer
 
 
-class DataProcessingRoutes:
+class FeatureProcessingRoutes:
     """
     Orchestrates data processing pipelines by combining DataProcessor and FeatureEngineer methods.
     """
@@ -23,7 +23,7 @@ class DataProcessingRoutes:
         self.data_processor = data_processor or DataProcessor()
         self.feature_engineer = feature_engineer or FeatureEngineer()
     
-    def process_full_pipeline(self, df: pd.DataFrame, categorical_columns: List[str], 
+    def run(self, df: pd.DataFrame, categorical_columns: List[str], 
                             sensor_columns: List[str], windows: List[int] = [3, 5]) -> pd.DataFrame:
         """
         Complete processing pipeline for the dataset.
@@ -50,6 +50,7 @@ class DataProcessingRoutes:
             sensor_columns, 
             windows=windows
         )
+        df_engineered.fillna(0, inplace=True)
 
         # Step 3: Encode categorical variables
         df_final = self.data_processor.encode_dataset(df_engineered, one_hot_columns=categorical_columns)

@@ -1,9 +1,7 @@
-"""
-Routes package for FPSO equipment monitoring.
+from .create_features import FeatureProcessingRoutes
+from .pre_process_data import PreProcessDataRoute
+from .run_models import RunModelsRoutes
+from .analyze_statistics import AnalyzeStatisticsRoute
 
-This package contains orchestration logic for different workflows and pipelines.
-"""
-
-from .data_processing import DataProcessingRoutes
-
-__all__ = ['DataProcessingRoutes']
+__all__ = ['FeatureProcessingRoutes', 'PreProcessDataRoute',
+           'RunModelsRoutes', 'AnalyzeStatisticsRoute']
