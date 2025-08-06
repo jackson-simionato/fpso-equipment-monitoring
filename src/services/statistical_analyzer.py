@@ -24,8 +24,10 @@ class StatisticalAnalyzer:
     # Summary Statistics Methods
     # ================================
     
-    def create_stats_summary(self, df: pd.DataFrame, target_col: Union[str, List[str]] = 'Fail_index',
-                            agg_funcs: List[str] = ['mean', 'max', 'median']) -> pd.DataFrame:
+    def create_stats_summary(self, df: pd.DataFrame, sensor_cols: Union[str, List[str]],
+                            target_col: str = 'Fail_index',
+                            agg_funcs: List[str] = ['mean', 'max', 'std'],
+                            ) -> pd.DataFrame:
         """Creates a summary DataFrame with specified aggregation functions for each sensor column.
         
         Args:
@@ -36,11 +38,8 @@ class StatisticalAnalyzer:
         Returns:
             pd.DataFrame: DataFrame with aggregated statistics.
         """
-        # Get float columns for sensor data
-        sensored_cols = df.select_dtypes(include=['float64']).columns.tolist()
-
         # Create aggregation dictionary
-        agg_dict = {col: agg_funcs for col in sensored_cols}
+        agg_dict = {col: agg_funcs for col in sensor_cols}
         
         # Handle single or multiple target columns for count
         if isinstance(target_col, str):
@@ -51,26 +50,27 @@ class StatisticalAnalyzer:
         
         # Group by target column(s) and aggregate
         result_df = df.groupby(target_col).agg(agg_dict)
+        result_df.fillna(0, inplace=True)  # Fill NaN values with 0
         
         return result_df
     
-    def mean_difference_by_target(self, df: pd.DataFrame, columns: List[str], target: str = 'Fail') -> pd.Series:
+    def mean_difference_by_target(self, df: pd.DataFrame, sensor_cols: List[str], target_col: str = 'Fail') -> pd.Series:
         """
         Calculates the mean difference for the specified columns between True and False states of the target variable.
 
         Args:
             df (pd.DataFrame): The dataframe containing the data.
-            columns (list): List of column names to calculate mean difference for.
-            target (str): The binary target column name.
+            sensor_cols (list): List of column names to calculate mean difference for.
+            target_col (str): The binary target column name.
 
         Returns:
             pd.Series: Mean difference (True - False) for each column.
         """
-        assert target in df.columns, f"Target column '{target}' not found in DataFrame."
-        assert all(col in df.columns for col in columns), "One or more specified columns not found in DataFrame."
-        
-        means_true = df[df[target] == True][columns].mean()
-        means_false = df[df[target] == False][columns].mean()
+        assert target_col in df.columns, f"Target column '{target_col}' not found in DataFrame."
+        assert all(col in df.columns for col in sensor_cols), "One or more specified columns not found in DataFrame."
+
+        means_true = df[df[target_col] == True][sensor_cols].mean()
+        means_false = df[df[target_col] == False][sensor_cols].mean()
 
         return means_true - means_false
     
@@ -78,9 +78,10 @@ class StatisticalAnalyzer:
     # Failure Analysis Methods
     # ================================
     
-    def get_buffer_around_index(self, df: pd.DataFrame, 
+    def get_buffer_around_index(self, df: pd.DataFrame,
                                start_index: int, 
                                stop_index: int,
+                               target_col: str = 'Fail',
                                buffer_before: int = 5,
                                buffer_after: int = 5,
                                exclude_failure_cycles: bool = False) -> pd.DataFrame:
@@ -113,7 +114,7 @@ class StatisticalAnalyzer:
             if idx in df.index:
                 # If exclude_failure_cycles=True, only add if not in failure
                 if exclude_failure_cycles:
-                    if not df.loc[idx, 'Fail']:
+                    if not df.loc[idx, target_col]:
                         buffer_indices.append(idx)
                 else:
                     buffer_indices.append(idx)
@@ -145,31 +146,3 @@ class StatisticalAnalyzer:
             numeric_data = df[columns]
         
         return numeric_data.corr()
-    
-    def find_high_correlations(self, df: pd.DataFrame, threshold: float = 0.7, 
-                              columns: Optional[List[str]] = None) -> List[Tuple[str, str, float]]:
-        """
-        Find pairs of variables with high correlation.
-        
-        Args:
-            df (pd.DataFrame): Input DataFrame
-            threshold (float): Correlation threshold for "high" correlation
-            columns (Optional[List[str]]): Specific columns to analyze
-            
-        Returns:
-            List[Tuple[str, str, float]]: List of (var1, var2, correlation) tuples
-        """
-        corr_matrix = self.analyze_correlations(df, columns)
-        
-        # Find high correlations (excluding self-correlations)
-        high_corrs = []
-        for i, col1 in enumerate(corr_matrix.columns):
-            for j, col2 in enumerate(corr_matrix.columns):
-                if i < j:  # Avoid duplicates and self-correlations
-                    corr_val = corr_matrix.loc[col1, col2]
-                    if abs(corr_val) >= threshold:
-                        high_corrs.append((col1, col2, corr_val))
-        
-        # Sort by absolute correlation value
-        high_corrs.sort(key=lambda x: abs(x[2]), reverse=True)
-        return high_corrs
